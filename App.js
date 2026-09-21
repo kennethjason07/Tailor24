@@ -1,33 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Platform, StatusBar, ActivityIndicator, View } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Import web styles for responsive design
 if (Platform.OS === 'web') {
-  require('./web-styles.css');
+  try {
+    require('./web-styles.css');
+  } catch (e) {
+    // web-styles.css is optional
+  }
 }
 
 // Suppress specific React Native Web deprecation warnings
 if (Platform.OS === 'web') {
-  // Suppress shadow* deprecation warnings
   const originalWarn = console.warn;
   console.warn = (...args) => {
     if (
-      typeof args[0] === 'string' && 
-      (args[0].includes('shadow*') || 
-       args[0].includes('pointerEvents is deprecated') ||
-       args[0].includes('resizeMode is deprecated') ||
-       args[0].includes('textShadow*'))
+      typeof args[0] === 'string' &&
+      (args[0].includes('shadow*') ||
+        args[0].includes('pointerEvents is deprecated') ||
+        args[0].includes('resizeMode is deprecated') ||
+        args[0].includes('textShadow*'))
     ) {
       return;
     }
     originalWarn.apply(console, args);
   };
 }
+
+import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginScreen from './LoginScreen';
+import CustomerHomeScreen from './CustomerHomeScreen';
 import DashboardScreen from './DashboardScreen';
 import WorkersScreen from './WorkersScreen';
 import OrdersOverviewScreen from './OrdersOverviewScreen';
@@ -46,73 +51,39 @@ import TodaysOrdersScreen from './TodaysOrdersScreen';
 
 const Stack = createStackNavigator();
 
-export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+function NavigationRoot() {
+  const { session, role, loading, signOut } = useAuth();
 
-  // Check for existing login session on app mount
-  useEffect(() => {
-    checkLoginStatus();
-  }, []);
-
-  const checkLoginStatus = async () => {
-    try {
-      const loginStatus = await AsyncStorage.getItem('isLoggedIn');
-      if (loginStatus === 'true') {
-        setIsLoggedIn(true);
-      }
-    } catch (error) {
-      console.error('Error checking login status:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleLogin = async () => {
-    try {
-      await AsyncStorage.setItem('isLoggedIn', 'true');
-      setIsLoggedIn(true);
-    } catch (error) {
-      console.error('Error saving login status:', error);
-      setIsLoggedIn(true); // Still log in even if storage fails
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await AsyncStorage.removeItem('isLoggedIn');
-      setIsLoggedIn(false);
-    } catch (error) {
-      console.error('Error removing login status:', error);
-      setIsLoggedIn(false); // Still log out even if storage fails
-    }
-  };
-
-  // Show loading screen while checking login status
-  if (isLoading) {
+  // Show loading screen while verifying auth session
+  if (loading) {
     return (
-      <SafeAreaProvider>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#2c3e50' }}>
-          <ActivityIndicator size="large" color="#db9b68" />
-        </View>
-      </SafeAreaProvider>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#2c3e50' }}>
+        <ActivityIndicator size="large" color="#3498db" />
+      </View>
     );
   }
 
-  if (!isLoggedIn) {
+  // Not authenticated -> Show Login / Register Screen
+  if (!session) {
     return (
-      <SafeAreaProvider>
+      <>
         <StatusBar
           barStyle={Platform.OS === 'ios' ? 'light-content' : 'light-content'}
           backgroundColor={Platform.OS === 'android' ? '#2c3e50' : undefined}
         />
-        <LoginScreen onLogin={handleLogin} />
-      </SafeAreaProvider>
+        <LoginScreen />
+      </>
     );
   }
 
+  // Authenticated as Customer -> Show dedicated Customer Portal
+  if (role === 'customer') {
+    return <CustomerHomeScreen />;
+  }
+
+  // Authenticated as Admin / Staff -> Show Full Tailor Management System
   return (
-    <SafeAreaProvider>
+    <>
       <StatusBar
         barStyle={Platform.OS === 'ios' ? 'dark-content' : 'light-content'}
         backgroundColor={Platform.OS === 'android' ? '#2980b9' : undefined}
@@ -141,7 +112,7 @@ export default function App() {
           }}
         >
           <Stack.Screen name="Dashboard">
-            {(props) => <DashboardScreen {...props} onLogout={handleLogout} />}
+            {(props) => <DashboardScreen {...props} onLogout={signOut} />}
           </Stack.Screen>
           <Stack.Screen name="Workers" component={WorkersScreen} />
           <Stack.Screen name="OrdersOverview" component={OrdersOverviewScreen} />
@@ -159,6 +130,16 @@ export default function App() {
           <Stack.Screen name="TodaysOrders" component={TodaysOrdersScreen} />
         </Stack.Navigator>
       </NavigationContainer>
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <AuthProvider>
+        <NavigationRoot />
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }
