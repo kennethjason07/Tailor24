@@ -32,7 +32,7 @@ if (Platform.OS === 'web') {
 
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginScreen from './LoginScreen';
-import CustomerHomeScreen from './CustomerHomeScreen';
+import CustomerHomeScreen from './screens/customer/CustomerHomeScreen';
 import DashboardScreen from './DashboardScreen';
 import WorkersScreen from './WorkersScreen';
 import OrdersOverviewScreen from './OrdersOverviewScreen';
