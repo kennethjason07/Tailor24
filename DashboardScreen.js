@@ -176,7 +176,7 @@ export default function DashboardScreen({ navigation, onLogout }) {
                 marginBottom: 8,
                 textShadow: '0px 1px 3px rgba(0, 0, 0, 0.3)',
                 paddingHorizontal: isSmallScreen ? 10 : 0,
-              }}>Maximus Consultancy Service</Text>
+              }}>Tailor24</Text>
               <Text style={{ 
                 fontSize: isSmallScreen ? 14 : 18, 
                 color: '#ecf0f1', 
